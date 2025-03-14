@@ -1,0 +1,39 @@
+run_type = "staged_learning"
+use_cuda = true  # run on the GPU if true, on the CPU if false
+tb_logdir = "tb_logs"  # name of the TensorBoard logging directory
+json_out_config = "_staged_learning.json"  # write this TOML to JSON
+
+[parameters]
+summary_csv_prefix = "_staged_learning"  # prefix for the CSV file
+use_checkpoint = false
+purge_memories = false
+prior_file = "priors/reinvent.prior"
+agent_file = "priors/reinvent.prior"
+batch_size = 32
+unique_sequences = true
+randomize_smiles = true
+
+[learning_strategy]
+type = "dap"
+sigma = 128
+rate = 0.0001
+
+### Stage 1
+[[stage]]
+chkpt_file = '_staged_test1.chkpt'  # name of the checkpoint file, can be reused as agent
+termination = "simple"  # termination criterion fot this stage
+max_score = 0.6  # terminate if this total score is exceeded
+min_steps = 25  # run for at least this number of steps
+max_steps = 100  # terminate entire run when exceeded
+
+[stage.scoring]
+type = "geometric_mean"
+[[stage.scoring.component]]
+
+[stage.scoring.component.numCarbons]
+[[stage.scoring.component.numCarbons.endpoint]]
+name = "Number of Carbons"
+weight = 0.7
+#params.target_carbons = 1
+params.formula = 'C'
+

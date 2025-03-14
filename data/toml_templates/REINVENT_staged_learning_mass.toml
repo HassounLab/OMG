@@ -1,0 +1,76 @@
+# REINVENT4 TOML input example for reinforcement/curriculum learning
+#
+#
+# Curriculum learning in REINVENT4 is a multi-stage reinforcement learning
+# run.  One or more stages (auto CL) can be defined.  But it is also
+# possible to continue a run from any checkpoint file that is generated
+# during the run (manual CL).  Currently checkpoints are written at the end
+# of a run also when the run is forcefully terminated with Ctrl-C.
+
+
+run_type = "staged_learning"
+use_cuda = true  # run on the GPU if true, on the CPU if false
+tb_logdir = "tb_logs"  # name of the TensorBoard logging directory
+json_out_config = "_staged_learning.json"  # write this TOML to JSON
+
+[parameters]
+
+# Uncomment one of the comment blocks below.  Each generator needs a model
+# file and possibly a SMILES file with seed structures.  If the run is to
+# be continued after termination, the agent_file would have to be replaced
+# with the checkpoint file.
+
+summary_csv_prefix = "_staged_learning"  # prefix for the CSV file
+use_checkpoint = false  # if true read diversity filter from agent_file
+purge_memories = false  # if true purge all diversity filter memories after each stage
+
+## Transfer learning model
+prior_file = "priors/reinvent.prior" # or "_TL_reinvent.model" again
+agent_file = "_TL_reinvent.model"
+
+batch_size = 64          # network
+
+unique_sequences = true  # if true remove all duplicates raw sequences in each step
+                         # only here for backward compatibility
+randomize_smiles = true  # if true shuffle atoms in SMILES randomly
+
+
+[learning_strategy]
+
+type = "dap"      # dap: only one supported
+sigma = 128       # sigma of the RL reward function
+rate = 0.0001     # for torch.optim
+
+### Stage 1
+### Note that stages must always be a list i.e. double brackets
+[[stage]]
+
+chkpt_file = '_staged_test1.chkpt'  # name of the checkpoint file, can be reused as agent
+
+termination = "simple"  # termination criterion fot this stage
+max_score = 0.6  # terminate if this total score is exceeded
+min_steps = 25  # run for at least this number of steps
+max_steps = 100  # terminate entire run when exceeded
+
+[stage.scoring]
+type = "geometric_mean"  # aggregation function
+
+[[stage.scoring.component]]
+[stage.scoring.component.MolecularWeight]
+
+[[stage.scoring.component.MolecularWeight.endpoint]]
+name = "Molecular weight"  # user chosen name for output
+weight = 0.342  # weight to fine-tune the relevance of this component
+
+# A transform ensures that the output from the scoring component ranges
+# from 0 to 1 to serve as a proper score.  Here we use a double sigmoid
+# to transform weights into the range 200-500 a.u.
+transform.type = "double_sigmoid"
+transform.high = 500.0
+transform.low = 200.0
+transform.coef_div = 150.0
+transform.coef_si = 20.0
+transform.coef_se = 20.0
+
+
+
