@@ -1,4 +1,5 @@
 import os
+import sys
 import csv
 import pandas as pd
 from rdkit import DataStructs
@@ -10,9 +11,10 @@ from dataset import mol_to_graph
 from train_contr import train_contr
 from torch.utils.data import DataLoader
 
-#TODO import from JESTR utils...
+# Add the JESTR utils directory to sys.path
+utils_path = os.path.abspath(os.path.join('..', 'JESTR1-main', 'utils'))
+sys.path.append(utils_path)
 from utils import collate_spectra_data, Spectra_data
-
 
 
 
