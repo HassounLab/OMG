@@ -12,7 +12,7 @@ All input information required may be specified in runOMG.sh. Once the code and 
 
 ## Perform evaluation of OMG using the CANOPUS and MassSpecGym datasets
 
-All data necessary to run the evaluation of OMG described in our paper is included in the JESTR repository and the data folder here. All variables in runOMG.sh currently point to the CANOPUS dataset. As a result, running the code as is will generate and rank candidates for the CANOPUS test set. To change to evaluating the MassSpecGym test set, specify --data_path to be '../JESTR1-main/data/MassSpecGym/' and then run the runOMG.sh file.
+All data necessary to run the evaluation of OMG described in our paper is included in the JESTR repository and the data folder here. The CANOPUS data is specified in the JESTR repository and should be downloaded as described there. The MassSpecGym data is available at: https://zenodo.org/records/16334702. Once downloaded, put the data under the 'JESTR1-main/data/MassSpecGym' directory. All variables in runOMG.sh currently point to the CANOPUS dataset. As a result, running the code as is will generate and rank candidates for the CANOPUS test set. To change to evaluating the MassSpecGym test set, specify --data_path to be '../JESTR1-main/data/MassSpecGym/' and then run the runOMG.sh file.
 
 ## Perform OMG using another dataset and PubChem-derived TL candidates
 
@@ -20,7 +20,7 @@ To apply OMG to another dataset of queries, include a dictionary of spectra quer
 
 ## References 
 <a id="1">[1]</a> 
-Martin, M.R. & Hassoun, S. (2025). Optimized de novo molecular generation (OMG) for mass spectra annotation using transfer and reinforcement learning. In preparation.
+Martin, M.R. & Hassoun, S. (2025). Optimized de novo molecular generation (OMG) for mass spectra annotation using transfer and reinforcement learning. Under review.
 
 <a id="2">[2]</a> 
 Loeffler, H. H., He, J., Tibo, A., Janet, J. P., Voronov, A., Mervin, L. H., & Engkvist, O. (2024). Reinvent 4: Modern AI–driven generative molecule design. Journal of Cheminformatics, 16(1), 20.

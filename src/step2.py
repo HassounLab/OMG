@@ -30,7 +30,7 @@ from argparse import ArgumentParser
 
 
 
-from utils_step2 import create_JESTR_molgraph_dict, apply_JESTR
+from utils_step2 import create_JESTR_molgraph_dict, apply_JESTR, apply_MSGym_JESTR
 
 from evaluation import evaluate_ranked_structures
 
@@ -47,7 +47,7 @@ input_path = args['OMG_data_path']
 
 save_path = data_path + 'output/ranking/'
 csv_path = data_path + 'output/molecular_generation/filtered_generated_candidates/'
-input_data = pd.read_csv(data_path+'output/molecular_generation/generated_config_files/struct_info.csv')
+input_data = pd.read_csv(data_path+'output/molecular_generation/generated_config_files/struct_info.csv', header=None)
 
 
 ######################
@@ -72,7 +72,7 @@ for idx, row in input_data.iterrows():
 
 #JESTR params
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-with open('../JESTR1-main/params.yaml') as f:
+with open('../JESTR1-main/params.yaml') as f: #TODO same params for MSGym? -> data_path = '../../apurva/spectra/massspecgym'
     params = yaml.load(f, Loader=yaml.FullLoader)
 
 if len(sys.argv) > 1:
@@ -88,14 +88,14 @@ if len(sys.argv) > 1:
                 params[key] = value_raw
 
 
-dir_path = "./"
+dir_path = "./" #TODO dir_path = "" for MSGym
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 logfile = params['logfile']
 output = open(logfile, "a")
 
 ms_intensity_threshold = 0.0
 
-dataset_builder = DatasetBuilder(params['exp'])
+dataset_builder = DatasetBuilder(params['exp']) #TODO for MSGym -> dataset_builder = DatasetBuilder(params['exp'], params['load_dicts'])
 dataset_builder.init(dir_path, params['fp_path'], ms_intensity_threshold)
 
 JESTR_data_path = dir_path + dataset_builder.data_dir
@@ -106,17 +106,22 @@ if os.path.exists(save_path + "model_output/molgraph_dict_with_cands.pkl"):
         molgraph_dict = pickle.load(f)
     with open(save_path + "model_output/ik_to_id_dict_spec.pkl", 'rb') as f:
         ik_to_id_dict_spec = pickle.load(f)
+    #TODO for MSGym -> Maybe just make both.....
+    with open(save_path + "jestr_output/smi_to_id_dict_spec.pkl", 'rb') as f:
+        smi_to_id_dict_spec = pickle.load(f)
+    #TODO
     with open(save_path + "model_output/match_results.pkl", 'rb') as f:
         match_results = pickle.load(f)
 
 else:
-    molgraph_dict, ik_to_id_dict_spec, match_results = create_JESTR_molgraph_dict(dataset_builder, params, device, csv_path, save_path)
+    molgraph_dict, ik_to_id_dict_spec, smi_to_id_dict_spec, match_results = create_JESTR_molgraph_dict(dataset_builder, params, device, csv_path, save_path)
 
 dataset_builder.molgraph_dict = molgraph_dict
 del molgraph_dict
 
 
 #############################################################################
+#TODO for MSGym -> is this next part necessary?
 # Collect generated smiles into inchikey and smiles dict
 if os.path.exists(save_path + "model_output/ik_smiles_dict.pkl"):
     with open(save_path + "model_output/ik_smiles_dict.pkl", 'rb') as f:
@@ -151,26 +156,52 @@ if os.path.exists(save_path+"model_output/results_smiles.pkl"):
     with open(save_path + "model_output/results_smiles.pkl", 'rb') as f:
         smiles_sim_dict = pickle.load(f)
 else:
-    smiles_sim_dict = apply_JESTR(ik_smiles_dict, match_results, params, dataset_builder, ik_to_id_dict_spec, output, device, JESTR_data_path, save_path)
+    if "NPLIB1" in data_path:
+        smiles_sim_dict = apply_JESTR(ik_smiles_dict, match_results, params, dataset_builder, ik_to_id_dict_spec, output, device, JESTR_data_path, save_path)
+    else:
+        with open(data_path + '/cand_dict_large_form.pkl', 'rb') as f:
+            cand_dict = pickle.load(f)
 
+        cand = dataset_builder.split_dict['test']
+
+        with open(data_path + '/inchi_to_id_dict.pkl', 'rb') as f:
+            inchi_to_id = pickle.load(f)
+        smiles_sim_dict = apply_MSGym_JESTR(ik_smiles_dict, inchi_to_id, match_results, params, dataset_builder, cand_dict, output, device, data_path, save_path)
 
 ###############################
 #evaluate against benchmarks
 if evaluation:
-    temp = []
-    for idx, row in input_data.iterrows():
-        true = row[7]
-        formula = row[2]
-        temp_id = row[0]
-        if temp_id in smiles_sim_dict.keys():
-            sort_cands = {k: v for k, v in
-                          sorted(smiles_sim_dict[temp_id].items(), key=lambda item: item[1], reverse=True)}
-            if len(sort_cands.keys()) > 0:
-                temp.append([true, list(sort_cands.keys())])
+    if "NPLIB1" in data_path:
+        temp = []
+        for idx, row in input_data.iterrows():
+            true = row[7]
+            formula = row[2]
+            temp_id = row[0]
+            if temp_id in smiles_sim_dict.keys():
+                sort_cands = {k: v for k, v in
+                              sorted(smiles_sim_dict[temp_id].items(), key=lambda item: item[1], reverse=True)}
+                if len(sort_cands.keys()) > 0:
+                    temp.append([true, list(sort_cands.keys())])
+                else:
+                    temp.append([true, ['-']])
             else:
                 temp.append([true, ['-']])
-        else:
-            temp.append([true, ['-']])
+    else:
+        temp = []
+        for idx, row in input_data.iterrows():
+            true = row[7]
+            formula = row[2]
+            temp_id = row[0]
+            if temp_id in smiles_sim_dict.keys():
+                sort_cands = {k: v for k, v in
+                              sorted(smiles_sim_dict[temp_id].items(), key=lambda item: item[1], reverse=True)}
+                if len(sort_cands.keys()) > 0:
+                    temp.append([true.split('_')[-1], list(sort_cands.keys())])
+
+                else:
+                    temp.append([true.split('_')[-1], ['-']])
+            else:
+                temp.append([true, ['-']])
     df = pd.DataFrame(temp, columns=["true","pred"])
 
     evaluate_ranked_structures(df)

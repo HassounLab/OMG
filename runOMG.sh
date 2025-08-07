@@ -1,8 +1,9 @@
 #!/bin/bash
 
 spectra_data_path='../JESTR1-main/data/NPLIB1/'
+#spectra_data_path='../JESTR1-main/data/MassSpecGym/'
 OMG_data_path='../data/'
-evaluation=True
+evaluation=true
 
 reinvent_path='../REINVENT4/'
 max_processes=1

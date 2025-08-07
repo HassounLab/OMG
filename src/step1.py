@@ -41,8 +41,11 @@ if evaluation:
         data = pickle.load(f)
     with open(data_path + 'split.pkl', 'rb') as f:
         split = pickle.load(f)
-    with open(data_path + 'mol_dict.pkl', 'rb') as f:
-        mol_dict = pickle.load(f)
+    if os.path.exists(data_path + 'mol_dict.pkl'):
+        with open(data_path + 'mol_dict.pkl', 'rb') as f:
+            mol_dict = pickle.load(f)
+    else:
+        mol_dict = {}
 else:
     with open(data_path + 'data_dict.pkl', 'rb') as f:
         data = pickle.load(f)

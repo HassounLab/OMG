@@ -139,8 +139,11 @@ def preprocess_data_groundtruth(data,split,mol_dict,save_path):
         target_ik = data[k]['inchikey'].split('-')[0]
         target_mass = data[k]['CalculatedMass']
         precursor_mz = data[k]['PrecursorMZ']
-        m = mol_dict[v]
-        smiles = Chem.MolToSmiles(m)
+        if 'smiles' in data[k].keys():
+            smiles = data[k]['smiles']
+        else:
+            m = mol_dict[v]
+            smiles = Chem.MolToSmiles(m)
         count += 1
         num_cands = get_cands(k, formula, save_path, target=target_ik)
         structure_info_total.append([k, v, formula, target_ik, target_mass, precursor_mz, num_cands, smiles])
@@ -352,6 +355,34 @@ def filter_generated_strucures(input_data, ik_spec_dict, save_path, output_path)
                         for smi in gen_cands:
                             writer.writerow([smi])
 
+    return
+
+def filter_generated_strucures(input_data, ik_spec_dict, save_path, output_path):
+    for idx, row in input_data.iterrows():
+        id = row[0]
+        if not os.path.isfile(save_path + 'all_generated_candidates/' + id + '_generated_candidates.csv'):
+            target_mf = row[2]
+            gen_cands_smiles = []
+            gen_cands_ik_block1 = []
+            for o_p in output_path:
+                if os.path.isfile(o_p + id + '_sampling.csv'):  # './output/' + id + '_sampling.csv'
+                    reinvent_output = pd.read_csv(o_p + id + '_sampling.csv')
+                    for idx2, row2 in reinvent_output.iterrows():
+                        m = Chem.MolFromSmiles(row2['SMILES'])
+                        if m != None:
+                            Chem.RemoveStereochemistry(m)
+                            gen_ik = Chem.inchi.MolToInchiKey(m).split('-')[0]
+                            if gen_ik not in gen_cands_ik_block1:  # make sure each unique 2D structure is only counted once
+                                gen_inchi = Chem.inchi.MolToInchi(m)
+                                gen_mf = gen_inchi.split('/')[1]
+                                if gen_mf == target_mf:
+                                    gen_cands_smiles.append(row2['SMILES'])
+                                    gen_cands_ik_block1.append(gen_ik)
+            with open(save_path + 'all_generated_candidates/' + id + '_generated_candidates.csv', 'w',
+                      newline='') as file:
+                writer = csv.writer(file)
+                for smi in gen_cands_smiles:
+                    writer.writerow([smi])
     return
 
 def evaluate_generated_structures(input_data, evaluation, save_path, csv_path, smi_path):
